@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CYBERPUNK TETRIS // EXPLOSIVE EDITION</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Orbitron & Rajdhani -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-cyan: #00f0ff;
+            --neon-pink: #ff007f;
+            --neon-yellow: #ffe600;
+            --neon-purple: #a100ff;
+            --neon-orange: #ff5500;
+            --bg-dark: #0a0a12;
+            --panel-bg: rgba(18, 18, 32, 0.85);
+        }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background-color: var(--bg-dark);
+            color: #ffffff;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.08) 0%, transparent 60%),
+                linear-gradient(rgba(255, 0, 127, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 0, 127, 0.03) 1px, transparent 1px);
+            background-size: 100% 100%, 30px 30px, 30px 30px;
+            overflow-x: hidden;
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* Neon Glow Utility Effects */
+        .glow-cyan {
+            text-shadow: 0 0 8px var(--neon-cyan), 0 0 15px var(--neon-cyan);
+        }
+        .glow-pink {
+            text-shadow: 0 0 8px var(--neon-pink), 0 0 15px var(--neon-pink);
+        }
+        .glow-yellow {
+            text-shadow: 0 0 8px var(--neon-yellow), 0 0 15px var(--neon-yellow);
+        }
+
+        .box-glow-cyan {
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3), inset 0 0 15px rgba(0, 240, 255, 0.15);
+            border: 1px solid var(--neon-cyan);
+        }
+        .box-glow-pink {
+            box-shadow: 0 0 15px rgba(255, 0, 127, 0.3), inset 0 0 15px rgba(255, 0, 127, 0.15);
+            border: 1px solid var(--neon-pink);
+        }
+        .box-glow-yellow {
+            box-shadow: 0 0 15px rgba(255, 230, 0, 0.3), inset 0 0 15px rgba(255, 230, 0, 0.15);
+            border: 1px solid var(--neon-yellow);
+        }
+
+        /* Scanline Overlay Effect */
+        .scanline-overlay {
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%, 
+                rgba(0, 0, 0, 0.25) 50%
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+
+        /* Cyber Button Styling */
+        .cyber-button {
+            position: relative;
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid var(--neon-cyan);
+            color: #fff;
+            transition: all 0.15s ease;
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+        }
+        .cyber-button:hover:not(:disabled) {
+            background: var(--neon-cyan);
+            color: #000;
+            box-shadow: 0 0 20px var(--neon-cyan);
+            transform: translateY(-2px);
+        }
+        .cyber-button:active:not(:disabled) {
+            transform: translateY(1px);
+        }
+
+        .cyber-button-pink {
+            background: rgba(255, 0, 127, 0.1);
+            border-color: var(--neon-pink);
+        }
+        .cyber-button-pink:hover:not(:disabled) {
+            background: var(--neon-pink);
+            color: #fff;
+            box-shadow: 0 0 20px var(--neon-pink);
+        }
+
+        /* Touch control buttons */
+        .touch-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 12px;
+            backdrop-filter: blur(4px);
+            transition: background 0.1s, transform 0.1s;
+        }
+        .touch-btn:active {
+            background: rgba(0, 240, 255, 0.4);
+            transform: scale(0.95);
+        }
+
+        /* Canvas Wrapper & Shake Effect */
+        #canvas-container {
+            position: relative;
+            transition: transform 0.05s ease-out;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--neon-cyan);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-2 md:p-4 select-none relative overflow-y-auto">
+
+    <!-- Scanline Effect -->
+    <div class="absolute inset-0 scanline-overlay z-10 pointer-events-none"></div>
+
+    <!-- Header -->
+    <header class="w-full max-w-4xl flex items-center justify-between mb-3 z-20">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid fa-burst text-2xl md:text-3xl text-yellow-400 animate-pulse"></i>
+            <h1 class="font-orbitron font-black text-xl md:text-3xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-pink-500 to-yellow-400">
+                CYBER<span class="text-yellow-400">TETRIS</span>
+            </h1>
+            <span class="bg-pink-600/30 text-pink-400 border border-pink-500/50 text-[10px] md:text-xs font-mono px-2 py-0.5 rounded tracking-widest uppercase">Explosive</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <button id="btn-audio" class="w-10 h-10 rounded-lg box-glow-cyan flex items-center justify-center text-cyan-400 hover:bg-cyan-500/20 transition">
+                <i class="fa-solid fa-volume-high text-lg"></i>
+            </button>
+            <button id="btn-pause" class="w-10 h-10 rounded-lg box-glow-pink flex items-center justify-center text-pink-400 hover:bg-pink-500/20 transition">
+                <i class="fa-solid fa-pause text-lg"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Layout -->
+    <main class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-12 gap-4 items-start z-20">
+        
+        <!-- Left Sidebar: Hold Piece & Stats -->
+        <div class="md:col-span-3 flex flex-row md:flex-col gap-3 justify-between">
+            <!-- Hold Panel -->
+            <div class="flex-1 bg-slate-900/80 backdrop-blur box-glow-cyan p-3 rounded-lg flex flex-col items-center">
+                <h2 class="font-orbitron text-xs md:text-sm text-cyan-400 font-bold mb-2 uppercase tracking-widest flex items-center gap-1">
+                    <i class="fa-solid fa-hand"></i> Hold Piece
+                </h2>
+                <div class="w-20 h-20 md:w-24 md:h-24 bg-black/50 rounded flex items-center justify-center border border-cyan-500/20">
+                    <canvas id="hold-canvas" width="96" height="96"></canvas>
+                </div>
+                <span class="text-[10px] text-slate-400 mt-1">[KEY: C / SHIFT]</span>
+            </div>
+
+            <!-- Stats Panel -->
+            <div class="flex-1 bg-slate-900/80 backdrop-blur box-glow-pink p-3 rounded-lg flex flex-col justify-around gap-2">
+                <div>
+                    <span class="text-[10px] text-slate-400 font-mono tracking-wider uppercase">HIGH SCORE</span>
+                    <div id="high-score" class="font-orbitron text-lg md:text-2xl font-bold text-yellow-400 glow-yellow">000000</div>
+                </div>
+                <div>
+                    <span class="text-[10px] text-slate-400 font-mono tracking-wider uppercase">SCORE</span>
+                    <div id="score" class="font-orbitron text-xl md:text-3xl font-bold text-cyan-400 glow-cyan">000000</div>
+                </div>
+                <div class="flex justify-between items-center border-t border-slate-800 pt-2">
+                    <div>
+                        <span class="text-[10px] text-slate-400 uppercase">LEVEL</span>
+                        <div id="level" class="font-orbitron text-base md:text-xl text-pink-400">1</div>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-400 uppercase">LINES</span>
+                        <div id="lines" class="font-orbitron text-base md:text-xl text-yellow-400">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center: Game Board Canvas -->
+        <div class="md:col-span-6 flex flex-col items-center">
+            <div id="canvas-container" class="relative box-glow-cyan rounded-lg overflow-hidden bg-black/90 p-1">
+                <!-- Main Tetris Canvas -->
+                <canvas id="tetris-canvas" width="300" height="600" class="block rounded border border-cyan-500/30"></canvas>
+
+                <!-- Floating Text Overlay Container -->
+                <div id="text-overlay" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+
+                <!-- Banner Overlay: Bomb Triggered / Combo -->
+                <div id="bomb-banner" class="absolute top-1/3 inset-x-0 bg-red-600/90 text-yellow-300 font-orbitron font-black text-center py-2 text-xl tracking-widest border-y-2 border-yellow-400 opacity-0 transition-opacity duration-200 pointer-events-none shadow-2xl">
+                    <i class="fa-solid fa-bomb mr-2 animate-bounce"></i> BOMB UNLOCKED!
+                </div>
+
+                <!-- Game Over / Pause / Start Overlay Modal -->
+                <div id="game-modal" class="absolute inset-0 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30 transition-all">
+                    <div id="modal-content" class="flex flex-col items-center gap-4">
+                        <i id="modal-icon" class="fa-solid fa-gamepad text-5xl text-cyan-400 animate-pulse"></i>
+                        <h2 id="modal-title" class="font-orbitron text-2xl md:text-3xl font-black text-cyan-400 glow-cyan">CYBER TETRIS</h2>
+                        <p id="modal-desc" class="text-sm text-slate-300 max-w-xs font-mono">
+                            Line clear 2+ rows or trigger Combos to earn <span class="text-red-400 font-bold">CROSS-BOMBS</span>! Bombs detonate full rows & columns with cascade gravity!
+                        </p>
+                        <button id="btn-start" class="cyber-button font-orbitron text-base font-bold px-8 py-3 mt-2 rounded">
+                            START GAME
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar: Next Piece & Bomb Ammo & Info -->
+        <div class="md:col-span-3 flex flex-row md:flex-col gap-3 justify-between">
+            <!-- Next Piece Panel -->
+            <div class="flex-1 bg-slate-900/80 backdrop-blur box-glow-yellow p-3 rounded-lg flex flex-col items-center">
+                <h2 class="font-orbitron text-xs md:text-sm text-yellow-400 font-bold mb-2 uppercase tracking-widest flex items-center gap-1">
+                    <i class="fa-solid fa-forward"></i> Next Piece
+                </h2>
+                <div class="w-20 h-20 md:w-24 md:h-24 bg-black/50 rounded flex items-center justify-center border border-yellow-500/20">
+                    <canvas id="next-canvas" width="96" height="96"></canvas>
+                </div>
+            </div>
+
+            <!-- Bomb Status Panel -->
+            <div class="flex-1 bg-slate-900/80 backdrop-blur box-glow-pink p-3 rounded-lg flex flex-col items-center justify-center text-center">
+                <h2 class="font-orbitron text-xs text-pink-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <i class="fa-solid fa-bomb text-red-500"></i> Bomb Ammo
+                </h2>
+                <div id="bomb-counter" class="font-orbitron text-2xl md:text-4xl font-black text-red-500 glow-pink">
+                    0
+                </div>
+                <p class="text-[10px] text-slate-400 mt-1 font-mono">
+                    Earned on Double+ Clears & Combos!
+                </p>
+            </div>
+
+            <!-- Controls Info Panel (Desktop) -->
+            <div class="hidden md:block bg-slate-900/80 backdrop-blur border border-slate-800 p-3 rounded-lg text-xs font-mono text-slate-300">
+                <div class="text-cyan-400 font-orbitron font-bold mb-1 border-b border-slate-800 pb-1">KEYBOARD CONTROLS</div>
+                <div class="grid grid-cols-2 gap-y-1">
+                    <span>Move:</span> <span class="text-right text-yellow-400">← / → or A/D</span>
+                    <span>Rotate:</span> <span class="text-right text-yellow-400">↑ / W / Z/X</span>
+                    <span>Soft Drop:</span> <span class="text-right text-yellow-400">↓ or S</span>
+                    <span>Hard Drop:</span> <span class="text-right text-yellow-400">SPACEBAR</span>
+                    <span>Hold:</span> <span class="text-right text-yellow-400">C / SHIFT</span>
+                    <span>Pause:</span> <span class="text-right text-yellow-400">P / ESC</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Mobile Touch Controls Overlay -->
+    <div class="w-full max-w-xl md:hidden grid grid-cols-5 gap-2 mt-3 z-20">
+        <button id="touch-left" class="touch-btn h-12 flex items-center justify-center text-cyan-400 text-xl">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <button id="touch-right" class="touch-btn h-12 flex items-center justify-center text-cyan-400 text-xl">
+            <i class="fa-solid fa-arrow-right"></i>
+        </button>
+        <button id="touch-down" class="touch-btn h-12 flex items-center justify-center text-yellow-400 text-xl">
+            <i class="fa-solid fa-arrow-down"></i>
+        </button>
+        <button id="touch-rotate" class="touch-btn h-12 flex items-center justify-center text-pink-400 text-xl">
+            <i class="fa-solid fa-rotate-right"></i>
+        </button>
+        <button id="touch-hard" class="touch-btn h-12 flex items-center justify-center text-red-400 text-xl">
+            <i class="fa-solid fa-angles-down"></i>
+        </button>
+        <button id="touch-hold" class="col-span-5 touch-btn h-10 flex items-center justify-center text-cyan-300 font-orbitron text-xs tracking-widest">
+            <i class="fa-solid fa-hand mr-2"></i> HOLD PIECE
+        </button>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-4 text-center text-slate-500 text-xs font-mono z-20">
+        CYBERPUNK TETRIS &copy; 2026 // HTML5 CANVAS & WEBAUDIO API
+    </footer>
+
+    <!-- Game Logic JavaScript -->
+    <script>
+        // ==========================================
+        // CONSTANTS & GAME CONFIGURATION
+        // ==========================================
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30; // 300x600 canvas
+
+        // Game States: READY, PLAYING, ANIMATING, PAUSED, GAME_OVER
+        let gameState = 'READY';
+
+        // Local Storage Key
+        const HIGH_SCORE_KEY = 'cyber_tetris_highscore_v1';
+
+        // Board Representation: 0 = Empty, Object = { color, isBomb, glow }
+        let grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+
+        // Scoring & Stats
+        let score = 0;
+        let highScore = parseInt(localStorage.getItem(HIGH_SCORE_KEY) || '0', 10);
+        let linesCleared = 0;
+        let level = 1;
+        let bombAmmo = 0;
+
+        // Timing & Speed
+        let dropCounter = 0;
+        let dropInterval = 1000; // ms
+        let lastTime = 0;
+
+        // Player Tetromino State
+        let currentPiece = null;
+        let nextPiece = null;
+        let holdPiece = null;
+        let canHold = true;
+
+        // Audio Context (Synthesizer)
+        let audioCtx = null;
+        let soundEnabled = true;
+
+        // Visual Particles & Effects
+        let particles = [];
+        let screenShakeTime = 0;
+        let screenShakeMagnitude = 0;
+
+        // ==========================================
+        // TETROMINO DEFINITIONS & COLOR PALETTE
+        // ==========================================
+        const TETROMINOES = {
+            'I': {
+                shape: [
+                    [0, 0, 0, 0],
+                    [1, 1, 1, 1],
+                    [0, 0, 0, 0],
+                    [0, 0, 0, 0]
+                ],
+                color: '#00f0ff', // Cyan
+                glow: 'rgba(0, 240, 255, 0.8)'
+            },
+            'J': {
+                shape: [
+                    [1, 0, 0],
+                    [1, 1, 1],
+                    [0, 0, 0]
+                ],
+                color: '#0044ff', // Blue
+                glow: 'rgba(0, 68, 255, 0.8)'
+            },
+            'L': {
+                shape: [
+                    [0, 0, 1],
+                    [1, 1, 1],
+                    [0, 0, 0]
+                ],
+                color: '#ffaa00', // Orange
+                glow: 'rgba(255, 170, 0, 0.8)'
+            },
+            'O': {
+                shape: [
+                    [1, 1],
+                    [1, 1]
+                ],
+                color: '#ffe600', // Yellow
+                glow: 'rgba(255, 230, 0, 0.8)'
+            },
+            'S': {
+                shape: [
+                    [0, 1, 1],
+                    [1, 1, 0],
+                    [0, 0, 0]
+                ],
+                color: '#00ff66', // Green
+                glow: 'rgba(0, 255, 102, 0.8)'
+            },
+            'T': {
+                shape: [
+                    [0, 1, 0],
+                    [1, 1, 1],
+                    [0, 0, 0]
+                ],
+                color: '#a100ff', // Purple
+                glow: 'rgba(161, 0, 255, 0.8)'
+            },
+            'Z': {
+                shape: [
+                    [1, 1, 0],
+                    [0, 1, 1],
+                    [0, 0, 0]
+                ],
+                color: '#ff0055', // Pink Red
+                glow: 'rgba(255, 0, 85, 0.8)'
+            }
+        };
+
+        // Standard SRS Wall Kick Offsets (Basic implementation)
+        const WALL_KICK_OFFSETS = [
+            [0, 0], [-1, 0], [1, 0], [0, -1], [-1, -1], [1, -1]
+        ];
+
+        // Canvas Contexts
+        const canvas = document.getElementById('tetris-canvas');
+        const ctx = canvas.getContext('2d');
+        const nextCanvas = document.getElementById('next-canvas');
+        const nextCtx = nextCanvas.getContext('2d');
+        const holdCanvas = document.getElementById('hold-canvas');
+        const holdCtx = holdCanvas.getContext('2d');
+
+        // ==========================================
+        // SYNTHESIZER AUDIO ENGINE (Web Audio API)
+        // ==========================================
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        const Sound = {
+            playTone(freq, type, duration, gainVal = 0.1) {
+                if (!soundEnabled || !audioCtx) return;
+                try {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(gainVal, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + duration);
+                } catch(e) {}
+            },
+
+            move() {
+                this.playTone(400, 'sine', 0.05, 0.05);
+            },
+
+            rotate() {
+                this.playTone(600, 'triangle', 0.08, 0.08);
+            },
+
+            drop() {
+                this.playTone(180, 'square', 0.12, 0.12);
+            },
+
+            clearLine() {
+                if (!soundEnabled || !audioCtx) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C Major Chord
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => this.playTone(freq, 'triangle', 0.2, 0.15), idx * 50);
+                });
+            },
+
+            explosion() {
+                if (!soundEnabled || !audioCtx) return;
+                try {
+                    // White noise buffer for retro explosion sound
+                    const bufferSize = audioCtx.sampleRate * 0.4;
+                    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                    const output = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        output[i] = Math.random() * 2 - 1;
+                    }
+                    const noise = audioCtx.createBufferSource();
+                    noise.buffer = buffer;
+
+                    const filter = audioCtx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(800, audioCtx.currentTime);
+                    filter.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.4);
+
+                    const gain = audioCtx.createGain();
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+
+                    noise.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    noise.start();
+                } catch(e) {}
+            },
+
+            reward() {
+                if (!soundEnabled || !audioCtx) return;
+                const arpeggio = [440, 554.37, 659.25, 880];
+                arpeggio.forEach((freq, idx) => {
+                    setTimeout(() => this.playTone(freq, 'sine', 0.15, 0.1), idx * 60);
+                });
+            },
+
+            gameOver() {
+                if (!soundEnabled || !audioCtx) return;
+                const notes = [300, 260, 220, 150];
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => this.playTone(freq, 'sawtooth', 0.3, 0.2), idx * 120);
+                });
+            }
+        };
+
+        // ==========================================
+        // TETRIS ENGINE & PIECE LOGIC
+        // ==========================================
+        function createPiece(type, isBomb = false) {
+            const proto = TETROMINOES[type];
+            // Clone matrix
+            const matrix = proto.shape.map(row => [...row]);
+            
+            // If piece contains a bomb, pick a non-empty cell inside the matrix
+            let bombCoords = null;
+            if (isBomb) {
+                let nonZero = [];
+                for (let r = 0; r < matrix.length; r++) {
+                    for (let c = 0; c < matrix[r].length; c++) {
+                        if (matrix[r][c] === 1) nonZero.push({r, c});
+                    }
+                }
+                if (nonZero.length > 0) {
+                    bombCoords = nonZero[Math.floor(Math.random() * nonZero.length)];
+                }
+            }
+
+            return {
+                type: type,
+                matrix: matrix,
+                color: proto.color,
+                glow: proto.glow,
+                x: Math.floor((COLS - matrix[0].length) / 2),
+                y: 0,
+                bombCoords: bombCoords // {r, c} if bomb exists
+            };
+        }
+
+        function getRandomPiece() {
+            const types = Object.keys(TETROMINOES);
+            const randType = types[Math.floor(Math.random() * types.length)];
+            
+            // Spawn bomb if ammo is available
+            let useBomb = false;
+            if (bombAmmo > 0) {
+                useBomb = true;
+                bombAmmo--;
+                updateScoreUI();
+            }
+            return createPiece(randType, useBomb);
+        }
+
+        function rotateMatrix(matrix, dir = 1) {
+            const N = matrix.length;
+            let result = Array.from({ length: N }, () => Array(N).fill(0));
+            for (let r = 0; r < N; r++) {
+                for (let c = 0; c < N; c++) {
+                    if (dir > 0) {
+                        result[c][N - 1 - r] = matrix[r][c];
+                    } else {
+                        result[N - 1 - c][r] = matrix[r][c];
+                    }
+                }
+            }
+            return result;
+        }
+
+        function checkCollision(piece, offsetX = 0, offsetY = 0, customMatrix = null) {
+            const m = customMatrix || piece.matrix;
+            for (let r = 0; r < m.length; r++) {
+                for (let c = 0; c < m[r].length; c++) {
+                    if (m[r][c] !== 0) {
+                        let newX = piece.x + c + offsetX;
+                        let newY = piece.y + r + offsetY;
+
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                            return true; // Out of bounds
+                        }
+                        if (newY >= 0 && grid[newY][newX] !== 0) {
+                            return true; // Grid collision
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        // Lock piece into standard grid
+        function lockPiece(piece) {
+            for (let r = 0; r < piece.matrix.length; r++) {
+                for (let c = 0; c < piece.matrix[r].length; c++) {
+                    if (piece.matrix[r][c] !== 0) {
+                        let gridY = piece.y + r;
+                        let gridX = piece.x + c;
+                        if (gridY >= 0 && gridY < ROWS) {
+                            let isBombCell = (piece.bombCoords && piece.bombCoords.r === r && piece.bombCoords.c === c);
+                            grid[gridY][gridX] = {
+                                color: piece.color,
+                                glow: piece.glow,
+                                isBomb: isBombCell
+                            };
+                        }
+                    }
+                }
+            }
+        }
+
+        // Ghost Piece Location Calculation
+        function getGhostPosition() {
+            if (!currentPiece) return 0;
+            let ghostY = 0;
+            while (!checkCollision(currentPiece, 0, ghostY + 1)) {
+                ghostY++;
+            }
+            return ghostY;
+        }
+
+        // ==========================================
+        // CUSTOM BOMB BFS EXPLOSION & GRAVITY CASCADE ENGINE
+        // ==========================================
+
+        /**
+         * BFS Cross Explosion Algorithm (十字爆破 + 連鎖)
+         * Guarantees no infinite loops using Queue & Visited Set.
+         */
+        function runBFSExplosion(startBombs) {
+            let queue = [...startBombs]; // Array of {r, c}
+            let visitedBombs = new Set(startBombs.map(b => `${b.r},${b.c}`));
+            let destroyedCells = new Set();
+
+            while (queue.length > 0) {
+                let {r, c} = queue.shift();
+
+                // Destroy entire ROW 'r'
+                for (let col = 0; col < COLS; col++) {
+                    destroyedCells.add(`${r},${col}`);
+                    // Chain reaction: check if intersected cell contains another bomb
+                    if (grid[r][col] && grid[r][col].isBomb) {
+                        let key = `${r},${col}`;
+                        if (!visitedBombs.has(key)) {
+                            visitedBombs.add(key);
+                            queue.push({r: r, c: col});
+                        }
+                    }
+                }
+
+                // Destroy entire COLUMN 'c'
+                for (let row = 0; row < ROWS; row++) {
+                    destroyedCells.add(`${row},${c}`);
+                    // Chain reaction: check if intersected cell contains another bomb
+                    if (grid[row][c] && grid[row][c].isBomb) {
+                        let key = `${row},${c}`;
+                        if (!visitedBombs.has(key)) {
+                            visitedBombs.add(key);
+                            queue.push({r: row, c: c});
+                        }
+                    }
+                }
+            }
+
+            // Return array of unique cell coordinates to be destroyed
+            return Array.from(destroyedCells).map(key => {
+                let [r, c] = key.split(',').map(Number);
+                return {r, c};
+            });
+        }
+
+        /**
+         * Column-by-Column Gravity Compression (重力塌陷)
+         */
+        function applyGravityFall() {
+            for (let c = 0; c < COLS; c++) {
+                let remainingBlocks = [];
+                for (let r = 0; r < ROWS; r++) {
+                    if (grid[r][c] !== 0) {
+                        remainingBlocks.push(grid[r][c]);
+                    }
+                }
+                let emptyCount = ROWS - remainingBlocks.length;
+                for (let r = 0; r < ROWS; r++) {
+                    if (r < emptyCount) {
+                        grid[r][c] = 0;
+                    } else {
+                        grid[r][c] = remainingBlocks[r - emptyCount];
+                    }
+                }
+            }
+        }
+
+        /**
+         * Async Cascade Loop for Line Clears, Bomb Detonations, and Gravity Falls
+         */
+        async function processCascadeLoop() {
+            gameState = 'ANIMATING'; // Lock inputs during explosion & fall animations
+
+            let turnClearedLines = 0;
+            let comboCount = 0;
+
+            while (true) {
+                // 1. Identify full rows
+                let fullRows = [];
+                for (let r = 0; r < ROWS; r++) {
+                    if (grid[r].every(cell => cell !== 0)) {
+                        fullRows.push(r);
+                    }
+                }
+
+                // 2. Identify any Bomb cells inside the full rows
+                let bombsToDetonate = [];
+                for (let r of fullRows) {
+                    for (let c = 0; c < COLS; c++) {
+                        if (grid[r][c] && grid[r][c].isBomb) {
+                            bombsToDetonate.push({r, c});
+                        }
+                    }
+                }
+
+                // Stop loop if no full lines remain
+                if (fullRows.length === 0) {
+                    break;
+                }
+
+                comboCount++;
+                turnClearedLines += fullRows.length;
+
+                // 3. Handle Explosions vs Standard Clear
+                if (bombsToDetonate.length > 0) {
+                    // Trigger BFS Cross Explosions
+                    Sound.explosion();
+                    let destroyedCells = runBFSExplosion(bombsToDetonate);
+
+                    // Spawn visual spark particles & screen shake
+                    spawnExplosionParticles(destroyedCells);
+                    triggerScreenShake(18, 350);
+                    showBanner(`MEGA CROSS BOOM x${bombsToDetonate.length}!`);
+
+                    // Clear destroyed cells
+                    for (let cell of destroyedCells) {
+                        grid[cell.r][cell.c] = 0;
+                    }
+
+                    // Score calculation for Bomb Detonation
+                    let bombPoints = destroyedCells.length * 60 * level * comboCount;
+                    score += bombPoints;
+                    updateScoreUI();
+
+                    await sleep(300);
+                } else {
+                    // Standard Line Clear
+                    Sound.clearLine();
+                    triggerScreenShake(6, 150);
+
+                    // Flash row visual effects
+                    let clearCells = [];
+                    for (let r of fullRows) {
+                        for (let c = 0; c < COLS; c++) clearCells.push({r, c});
+                    }
+                    spawnSparkleParticles(clearCells);
+
+                    // Clear full rows
+                    for (let r of fullRows) {
+                        for (let c = 0; c < COLS; c++) {
+                            grid[r][c] = 0;
+                        }
+                    }
+
+                    let linePoints = [0, 100, 300, 500, 800][fullRows.length] * level * comboCount;
+                    score += linePoints;
+                    linesCleared += fullRows.length;
+                    level = Math.floor(linesCleared / 10) + 1;
+                    dropInterval = Math.max(100, 1000 - (level - 1) * 80);
+                    updateScoreUI();
+
+                    await sleep(200);
+                }
+
+                // 4. Execute Gravity Fall (Column Compression)
+                applyGravityFall();
+                await sleep(250); // Pause to let gravity fall register visually
+            }
+
+            // Reward Bomb Ammo if player gets 2+ lines or Combo >= 2
+            if (turnClearedLines >= 2 || comboCount >= 2) {
+                bombAmmo += (turnClearedLines >= 4 ? 2 : 1);
+                Sound.reward();
+                showBanner("BOMB UNLOCKED!");
+                updateScoreUI();
+            }
+
+            // Spawn next piece
+            spawnNextPiece();
+
+            // Check Game Over condition
+            if (checkCollision(currentPiece)) {
+                gameState = 'GAME_OVER';
+                Sound.gameOver();
+                showGameOverModal();
+            } else {
+                gameState = 'PLAYING'; // Unlock user inputs
+            }
+        }
+
+        // ==========================================
+        // VISUAL PARTICLES & SCREEN SHAKE ENGINE
+        // ==========================================
+        function spawnExplosionParticles(cells) {
+            cells.forEach(cell => {
+                const px = cell.c * BLOCK_SIZE + BLOCK_SIZE / 2;
+                const py = cell.r * BLOCK_SIZE + BLOCK_SIZE / 2;
+                for (let i = 0; i < 12; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 2 + Math.random() * 8;
+                    particles.push({
+                        x: px,
+                        y: py,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        size: 3 + Math.random() * 5,
+                        color: ['#ff0055', '#ffe600', '#ff5500', '#ffffff'][Math.floor(Math.random() * 4)],
+                        alpha: 1.0,
+                        decay: 0.03 + Math.random() * 0.03
+                    });
+                }
+            });
+        }
+
+        function spawnSparkleParticles(cells) {
+            cells.forEach(cell => {
+                const px = cell.c * BLOCK_SIZE + BLOCK_SIZE / 2;
+                const py = cell.r * BLOCK_SIZE + BLOCK_SIZE / 2;
+                for (let i = 0; i < 3; i++) {
+                    particles.push({
+                        x: px,
+                        y: py,
+                        vx: (Math.random() - 0.5) * 4,
+                        vy: (Math.random() - 0.5) * 4,
+                        size: 2 + Math.random() * 3,
+                        color: '#00f0ff',
+                        alpha: 1.0,
+                        decay: 0.04
+                    });
+                }
+            });
+        }
+
+        function updateAndDrawParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= p.decay;
+
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 8;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function triggerScreenShake(magnitude, durationMs) {
+            screenShakeMagnitude = magnitude;
+            screenShakeTime = durationMs;
+        }
+
+        function applyScreenShake(deltaTime) {
+            const container = document.getElementById('canvas-container');
+            if (screenShakeTime > 0) {
+                screenShakeTime -= deltaTime;
+                const rx = (Math.random() - 0.5) * screenShakeMagnitude;
+                const ry = (Math.random() - 0.5) * screenShakeMagnitude;
+                container.style.transform = `translate(${rx}px, ${ry}px)`;
+            } else {
+                container.style.transform = `translate(0px, 0px)`;
+            }
+        }
+
+        // ==========================================
+        // CANVAS RENDERING ENGINE
+        // ==========================================
+        function drawBlock(context, x, y, color, glow, isBomb = false, isGhost = false) {
+            const px = x * BLOCK_SIZE;
+            const py = y * BLOCK_SIZE;
+
+            context.save();
+
+            if (isGhost) {
+                context.strokeStyle = color;
+                context.lineWidth = 1.5;
+                context.setLineDash([4, 4]);
+                context.strokeRect(px + 2, py + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4);
+                context.fillStyle = 'rgba(255, 255, 255, 0.05)';
+                context.fillRect(px + 2, py + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4);
+                context.restore();
+                return;
+            }
+
+            // Glowing Outer Border
+            context.shadowColor = glow || color;
+            context.shadowBlur = 8;
+            context.fillStyle = color;
+            context.fillRect(px + 1, py + 1, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
+
+            // Bevel Highlight (3D Neon Effect)
+            context.fillStyle = 'rgba(255, 255, 255, 0.25)';
+            context.fillRect(px + 1, py + 1, BLOCK_SIZE - 2, 4);
+            context.fillRect(px + 1, py + 1, 4, BLOCK_SIZE - 2);
+
+            // Inner Shadow
+            context.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            context.fillRect(px + 1, py + BLOCK_SIZE - 5, BLOCK_SIZE - 2, 4);
+            context.fillRect(px + BLOCK_SIZE - 5, py + 1, 4, BLOCK_SIZE - 2);
+
+            // Special Bomb Drawing
+            if (isBomb) {
+                const pulse = Math.sin(Date.now() * 0.01) * 0.2 + 0.8;
+                const centerX = px + BLOCK_SIZE / 2;
+                const centerY = py + BLOCK_SIZE / 2;
+
+                // Pulsing Fire Core
+                context.fillStyle = `rgba(255, 30, 0, ${pulse})`;
+                context.beginPath();
+                context.arc(centerX, centerY, 8, 0, Math.PI * 2);
+                context.fill();
+
+                // Bomb Fuse Symbol
+                context.strokeStyle = '#ffe600';
+                context.lineWidth = 2;
+                context.beginPath();
+                context.moveTo(centerX, centerY - 4);
+                context.lineTo(centerX + 4, centerY - 10);
+                context.stroke();
+
+                // Fuse Spark
+                context.fillStyle = '#ffffff';
+                context.beginPath();
+                context.arc(centerX + 4, centerY - 10, 2, 0, Math.PI * 2);
+                context.fill();
+            }
+
+            context.restore();
+        }
+
+        function drawGrid() {
+            // Background Grid Lines
+            ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
+            ctx.lineWidth = 1;
+            for (let r = 0; r <= ROWS; r++) {
+                ctx.beginPath();
+                ctx.moveTo(0, r * BLOCK_SIZE);
+                ctx.lineTo(COLS * BLOCK_SIZE, r * BLOCK_SIZE);
+                ctx.stroke();
+            }
+            for (let c = 0; c <= COLS; c++) {
+                ctx.beginPath();
+                ctx.moveTo(c * BLOCK_SIZE, 0);
+                ctx.lineTo(c * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+                ctx.stroke();
+            }
+
+            // Locked Grid Cells
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (grid[r][c] !== 0) {
+                        const cell = grid[r][c];
+                        drawBlock(ctx, c, r, cell.color, cell.glow, cell.isBomb);
+                    }
+                }
+            }
+        }
+
+        function renderPreview(context, piece) {
+            context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+            if (!piece) return;
+
+            const matrix = piece.matrix;
+            const tileSize = 20;
+            const offsetX = (context.canvas.width - matrix[0].length * tileSize) / 2;
+            const offsetY = (context.canvas.height - matrix.length * tileSize) / 2;
+
+            for (let r = 0; r < matrix.length; r++) {
+                for (let c = 0; c < matrix[r].length; c++) {
+                    if (matrix[r][c] !== 0) {
+                        let isBombCell = (piece.bombCoords && piece.bombCoords.r === r && piece.bombCoords.c === c);
+                        
+                        context.save();
+                        context.fillStyle = piece.color;
+                        context.shadowColor = piece.glow;
+                        context.shadowBlur = 6;
+                        context.fillRect(offsetX + c * tileSize, offsetY + r * tileSize, tileSize - 1, tileSize - 1);
+
+                        if (isBombCell) {
+                            context.fillStyle = '#ff0000';
+                            context.beginPath();
+                            context.arc(offsetX + c * tileSize + tileSize/2, offsetY + r * tileSize + tileSize/2, 4, 0, Math.PI * 2);
+                            context.fill();
+                        }
+                        context.restore();
+                    }
+                }
+            }
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw board & static grid
+            drawGrid();
+
+            if (currentPiece && gameState === 'PLAYING') {
+                // 1. Draw Ghost Piece
+                let ghostYOffset = getGhostPosition();
+                for (let r = 0; r < currentPiece.matrix.length; r++) {
+                    for (let c = 0; c < currentPiece.matrix[r].length; c++) {
+                        if (currentPiece.matrix[r][c] !== 0) {
+                            drawBlock(
+                                ctx, 
+                                currentPiece.x + c, 
+                                currentPiece.y + r + ghostYOffset, 
+                                currentPiece.color, 
+                                currentPiece.glow, 
+                                false, 
+                                true
+                            );
+                        }
+                    }
+                }
+
+                // 2. Draw Current Active Piece
+                for (let r = 0; r < currentPiece.matrix.length; r++) {
+                    for (let c = 0; c < currentPiece.matrix[r].length; c++) {
+                        if (currentPiece.matrix[r][c] !== 0) {
+                            let isBombCell = (currentPiece.bombCoords && currentPiece.bombCoords.r === r && currentPiece.bombCoords.c === c);
+                            drawBlock(
+                                ctx, 
+                                currentPiece.x + c, 
+                                currentPiece.y + r, 
+                                currentPiece.color, 
+                                currentPiece.glow, 
+                                isBombCell
+                            );
+                        }
+                    }
+                }
+            }
+
+            // Draw Active Particle FX
+            updateAndDrawParticles();
+        }
+
+        // ==========================================
+        // INPUT HANDLERS & PLAYER ACTIONS
+        // ==========================================
+        function playerMove(dir) {
+            if (gameState !== 'PLAYING' || !currentPiece) return;
+            if (!checkCollision(currentPiece, dir, 0)) {
+                currentPiece.x += dir;
+                Sound.move();
+            }
+        }
+
+        function playerRotate(dir = 1) {
+            if (gameState !== 'PLAYING' || !currentPiece) return;
+            const rotated = rotateMatrix(currentPiece.matrix, dir);
+            
+            // Wall kick tests
+            for (let offset of WALL_KICK_OFFSETS) {
+                if (!checkCollision(currentPiece, offset[0], offset[1], rotated)) {
+                    currentPiece.matrix = rotated;
+                    currentPiece.x += offset[0];
+                    currentPiece.y += offset[1];
+                    Sound.rotate();
+                    return;
+                }
+            }
+        }
+
+        function playerSoftDrop() {
+            if (gameState !== 'PLAYING' || !currentPiece) return;
+            if (!checkCollision(currentPiece, 0, 1)) {
+                currentPiece.y++;
+                score += 1; // Soft drop bonus point
+                updateScoreUI();
+            } else {
+                // Lock piece into place
+                lockPiece(currentPiece);
+                Sound.drop();
+                processCascadeLoop(); // Enter async explosion/cascade handler
+            }
+            dropCounter = 0;
+        }
+
+        function playerHardDrop() {
+            if (gameState !== 'PLAYING' || !currentPiece) return;
+            let dropDist = 0;
+            while (!checkCollision(currentPiece, 0, 1)) {
+                currentPiece.y++;
+                dropDist++;
+            }
+            score += dropDist * 2; // Hard drop bonus points
+            updateScoreUI();
+            lockPiece(currentPiece);
+            Sound.drop();
+            processCascadeLoop();
+            dropCounter = 0;
+        }
+
+        function playerHold() {
+            if (gameState !== 'PLAYING' || !canHold || !currentPiece) return;
+            
+            Sound.rotate();
+            if (!holdPiece) {
+                holdPiece = createPiece(currentPiece.type);
+                spawnNextPiece();
+            } else {
+                let tempType = currentPiece.type;
+                currentPiece = createPiece(holdPiece.type);
+                holdPiece = createPiece(tempType);
+            }
+            canHold = false;
+            renderPreview(holdCtx, holdPiece);
+        }
+
+        function spawnNextPiece() {
+            currentPiece = nextPiece || getRandomPiece();
+            nextPiece = getRandomPiece();
+            canHold = true;
+            renderPreview(nextCtx, nextPiece);
+        }
+
+        // Keyboard Controls Listener
+        document.addEventListener('keydown', e => {
+            initAudio();
+
+            // Ignore input if state is ANIMATING or READY
+            if (gameState === 'ANIMATING' || gameState === 'READY') return;
+
+            if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+                togglePause();
+                return;
+            }
+
+            if (gameState !== 'PLAYING') return;
+
+            switch (e.key) {
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    playerMove(-1);
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    playerMove(1);
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    playerSoftDrop();
+                    break;
+                case 'ArrowUp':
+                case 'w':
+                case 'W':
+                case 'z':
+                case 'Z':
+                case 'x':
+                case 'X':
+                    playerRotate(1);
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    playerHardDrop();
+                    break;
+                case 'c':
+                case 'C':
+                case 'Shift':
+                    playerHold();
+                    break;
+            }
+        });
+
+        // Touch Control Listeners (Mobile friendly)
+        function bindTouchBtn(id, action) {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            const trigger = (e) => {
+                e.preventDefault();
+                initAudio();
+                action();
+            };
+            btn.addEventListener('touchstart', trigger, { passive: false });
+            btn.addEventListener('click', trigger);
+        }
+
+        bindTouchBtn('touch-left', () => playerMove(-1));
+        bindTouchBtn('touch-right', () => playerMove(1));
+        bindTouchBtn('touch-down', () => playerSoftDrop());
+        bindTouchBtn('touch-rotate', () => playerRotate(1));
+        bindTouchBtn('touch-hard', () => playerHardDrop());
+        bindTouchBtn('touch-hold', () => playerHold());
+
+        // ==========================================
+        // UI & GAME STATE MANAGEMENT
+        // ==========================================
+        function updateScoreUI() {
+            document.getElementById('score').innerText = String(score).padStart(6, '0');
+            document.getElementById('level').innerText = level;
+            document.getElementById('lines').innerText = linesCleared;
+            document.getElementById('bomb-counter').innerText = bombAmmo;
+
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem(HIGH_SCORE_KEY, highScore);
+            }
+            document.getElementById('high-score').innerText = String(highScore).padStart(6, '0');
+        }
+
+        function showBanner(text) {
+            const banner = document.getElementById('bomb-banner');
+            banner.innerHTML = `<i class="fa-solid fa-bomb mr-2 animate-bounce"></i> ${text}`;
+            banner.classList.remove('opacity-0');
+            setTimeout(() => {
+                banner.classList.add('opacity-0');
+            }, 1200);
+        }
+
+        function showGameOverModal() {
+            const modal = document.getElementById('game-modal');
+            document.getElementById('modal-icon').className = "fa-solid fa-skull-crossbones text-5xl text-pink-500 animate-bounce";
+            document.getElementById('modal-title').innerText = "GAME OVER";
+            document.getElementById('modal-title').className = "font-orbitron text-2xl md:text-3xl font-black text-pink-500 glow-pink";
+            document.getElementById('modal-desc').innerText = `FINAL SCORE: ${score} // LINES: ${linesCleared}`;
+            document.getElementById('btn-start').innerText = "RETRY";
+            modal.classList.remove('hidden');
+        }
+
+        function togglePause() {
+            if (gameState === 'PLAYING') {
+                gameState = 'PAUSED';
+                const modal = document.getElementById('game-modal');
+                document.getElementById('modal-icon').className = "fa-solid fa-pause text-5xl text-yellow-400 animate-pulse";
+                document.getElementById('modal-title').innerText = "GAME PAUSED";
+                document.getElementById('modal-title').className = "font-orbitron text-2xl md:text-3xl font-black text-yellow-400 glow-yellow";
+                document.getElementById('modal-desc').innerText = "Press P or ESC to Resume";
+                document.getElementById('btn-start').innerText = "RESUME";
+                modal.classList.remove('hidden');
+            } else if (gameState === 'PAUSED') {
+                gameState = 'PLAYING';
+                document.getElementById('game-modal').classList.add('hidden');
+            }
+        }
+
+        function startGame() {
+            initAudio();
+            grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+            score = 0;
+            linesCleared = 0;
+            level = 1;
+            bombAmmo = 0;
+            dropInterval = 1000;
+            holdPiece = null;
+            nextPiece = getRandomPiece();
+            
+            updateScoreUI();
+            renderPreview(holdCtx, null);
+            spawnNextPiece();
+
+            document.getElementById('game-modal').classList.add('hidden');
+            gameState = 'PLAYING';
+            lastTime = performance.now();
+        }
+
+        document.getElementById('btn-start').addEventListener('click', () => {
+            if (gameState === 'PAUSED') {
+                togglePause();
+            } else {
+                startGame();
+            }
+        });
+
+        document.getElementById('btn-pause').addEventListener('click', () => {
+            if (gameState === 'PLAYING' || gameState === 'PAUSED') {
+                togglePause();
+            }
+        });
+
+        document.getElementById('btn-audio').addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('btn-audio').querySelector('i');
+            icon.className = soundEnabled ? 'fa-solid fa-volume-high text-lg' : 'fa-solid fa-volume-xmark text-lg text-slate-500';
+        });
+
+        // Helper Sleep Function
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // ==========================================
+        // MAIN GAME LOOP (requestAnimationFrame)
+        // ==========================================
+        function update(time = 0) {
+            const deltaTime = time - lastTime;
+            lastTime = time;
+
+            if (gameState === 'PLAYING') {
+                dropCounter += deltaTime;
+                if (dropCounter > dropInterval) {
+                    playerSoftDrop();
+                }
+            }
+
+            applyScreenShake(deltaTime);
+            render();
+            requestAnimationFrame(update);
+        }
+
+        // Initialize UI
+        updateScoreUI();
+        requestAnimationFrame(update);
+
+    </script>
+</body>
+</html>
